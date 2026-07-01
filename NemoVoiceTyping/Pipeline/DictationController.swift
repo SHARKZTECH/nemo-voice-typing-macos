@@ -55,7 +55,11 @@ public class DictationController {
             NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Accessibility Permissions Required"
-            alert.informativeText = "Nemo Voice Typing needs Accessibility permissions to insert text directly into other applications.\n\nPlease enable it in System Settings and restart dictation."
+            alert.informativeText = """
+            Nemo Voice Typing needs Accessibility permissions to insert text directly into other applications.
+            
+            If it is already enabled, quit Nemo Voice Typing, remove any old duplicate Nemo entries in System Settings, then enable the installed app again and reopen it. Rebuilt or ad-hoc signed copies can appear as a new app to macOS.
+            """
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open Settings")
             alert.addButton(withTitle: "Cancel")

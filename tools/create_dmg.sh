@@ -63,9 +63,28 @@ cat <<EOF > entitlements.plist
 </plist>
 EOF
 
-# Code signing (Using Ad-hoc signing by default for local testing)
-# To sign with a Developer ID, run: SIGN_IDENTITY="Developer ID Application: Name" ./create_dmg.sh
-SIGN_IDENTITY=${SIGN_IDENTITY:-"-"}
+# Code signing.
+# Accessibility permissions are tied to the app's code-signing identity. Ad-hoc
+# signatures are fine for a one-off smoke test, but rebuilt ad-hoc apps can lose
+# their trusted Accessibility grant and appear to ask for permission repeatedly.
+# Use a stable Developer ID or local code-signing certificate for normal testing:
+#   SIGN_IDENTITY="Developer ID Application: Name" ./tools/create_dmg.sh
+SIGN_IDENTITY=${SIGN_IDENTITY:-""}
+
+if [ -z "$SIGN_IDENTITY" ]; then
+    if security find-identity -v -p codesigning | grep -q "Nemo Voice Typing Local Signing"; then
+        SIGN_IDENTITY="Nemo Voice Typing Local Signing"
+        echo "Using local signing identity: '$SIGN_IDENTITY'"
+    elif FIRST_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning | sed -n 's/.*"\(.*\)"/\1/p' | head -n 1); [ -n "$FIRST_CODESIGN_IDENTITY" ]; then
+        SIGN_IDENTITY="$FIRST_CODESIGN_IDENTITY"
+        echo "Using first available signing identity: '$SIGN_IDENTITY'"
+    else
+        SIGN_IDENTITY="-"
+        echo "WARNING: using ad-hoc signing."
+        echo "WARNING: macOS Accessibility permissions may reset after each rebuild."
+        echo "WARNING: create or pass a stable signing identity with SIGN_IDENTITY to avoid repeated permission prompts."
+    fi
+fi
 
 echo "Signing application bundle with identity: '$SIGN_IDENTITY'..."
 codesign --force --options runtime --entitlements entitlements.plist --sign "$SIGN_IDENTITY" "$APP_BUNDLE/Contents/MacOS/NemoVoiceTyping"
