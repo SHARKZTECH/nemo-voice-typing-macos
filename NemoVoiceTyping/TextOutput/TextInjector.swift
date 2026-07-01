@@ -8,7 +8,13 @@ public struct TextInjector {
     public static func type(_ text: String) {
         guard !text.isEmpty else { return }
         
-        paste(text)
+        if Thread.isMainThread {
+            paste(text)
+        } else {
+            DispatchQueue.main.sync {
+                paste(text)
+            }
+        }
     }
     
     private static func paste(_ text: String) {
@@ -20,10 +26,11 @@ public struct TextInjector {
         
         pressKey(9, flags: .maskCommand)
         
-        // Give the focused app a short window to consume the pasteboard before
-        // restoring it. This runs off the main thread in the dictation pipeline.
-        Thread.sleep(forTimeInterval: 0.15)
-        restorePasteboardItems(savedItems, to: pasteboard, injectedText: text)
+        // Give the focused app a window to consume the pasteboard before
+        // restoring it. Some Electron/WebKit fields read paste data asynchronously.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+            restorePasteboardItems(savedItems, to: pasteboard, injectedText: text)
+        }
     }
     
     public static func backspace(count: Int) {

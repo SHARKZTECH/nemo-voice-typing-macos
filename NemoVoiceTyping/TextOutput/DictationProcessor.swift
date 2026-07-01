@@ -13,6 +13,7 @@ public class DictationProcessor {
     
     private let commandWindow: TimeInterval = 1.5
     private let bufferIdleFlush: TimeInterval = 1.2
+    public var onTextTyped: ((String) -> Void)? = nil
     
     public init() {}
     
@@ -185,6 +186,7 @@ public class DictationProcessor {
         
         let text = sb
         TextInjector.type(text)
+        onTextTyped?(text.trimmingCharacters(in: .whitespacesAndNewlines))
         emitted.append(text)
         
         if let lastChar = text.last {
@@ -195,6 +197,7 @@ public class DictationProcessor {
     
     private func attachPunctuation(_ punct: String) {
         TextInjector.type(punct)
+        onTextTyped?(punct)
         if !emitted.isEmpty {
             emitted[emitted.count - 1] += punct
         } else {

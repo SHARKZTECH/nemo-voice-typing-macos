@@ -22,6 +22,7 @@ public class DictationController {
         self.panelController = panelController
         
         setupAudioCallbacks()
+        setupProcessorCallbacks()
     }
     
     private func setupAudioCallbacks() {
@@ -34,6 +35,15 @@ public class DictationController {
         audio.onLevel = { [weak self] level in
             DispatchQueue.main.async {
                 self?.panelController.pushAudioLevel(level)
+            }
+        }
+    }
+    
+    private func setupProcessorCallbacks() {
+        processor.onTextTyped = { [weak self] text in
+            guard !text.isEmpty else { return }
+            DispatchQueue.main.async {
+                self?.onLoadingStatusChanged?("Typed: \(text)", false)
             }
         }
     }
@@ -107,6 +117,9 @@ public class DictationController {
                 try await engine.loadModel(from: modelDir)
                 
                 engine.onTokenEmitted = { [weak self] piece in
+                    DispatchQueue.main.async {
+                        self?.onLoadingStatusChanged?("Heard: \(piece)", false)
+                    }
                     self?.queue.async {
                         self?.processor.push(piece: piece)
                     }
@@ -150,6 +163,7 @@ public class DictationController {
         do {
             try audio.start()
             panelController.setListening(true)
+            onLoadingStatusChanged?("Listening...", false)
         } catch {
             stop()
             NSApp.activate(ignoringOtherApps: true)
