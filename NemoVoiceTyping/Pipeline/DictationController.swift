@@ -91,13 +91,8 @@ public class DictationController {
                     }
                 })
                 
-                // Initialize ASREngine: CoreML primary, ONNX fallback
-                var engine: ASREngine
-                if config.preferCoreML {
-                    engine = CoreMLASREngine()
-                } else {
-                    engine = OnnxASREngine()
-                }
+                // Initialize ASREngine (using ONNX Runtime directly)
+                var engine: ASREngine = OnnxASREngine()
                 
                 try await engine.loadModel(from: modelDir)
                 

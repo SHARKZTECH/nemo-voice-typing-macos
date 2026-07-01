@@ -1,6 +1,6 @@
-# Walkthrough: Nemo Voice Typing macOS Port
+# Walkthrough: Nemo Voice Typing macOS Port (ONNX-first)
 
-We have completed the native macOS port of [nemo-voice-typing](https://github.com/Garnet-Owl/nemo-voice-typing) in Swift. We focused on high performance on Apple Silicon (using CoreML + Accelerate) and packaging distribution via DMG installers.
+We have completed the native macOS port of [nemo-voice-typing](https://github.com/Garnet-Owl/nemo-voice-typing) in Swift. The app runs on ONNX Runtime directly using native Swift SPM bindings, meaning it requires **zero Python runtime dependencies** to convert or package models.
 
 ---
 
@@ -18,10 +18,9 @@ We have completed the native macOS port of [nemo-voice-typing](https://github.co
 - Integrated Accelerate framework's **`vDSP_measqv`** for instant, vectorized RMS level calculations.
 - Developed **`MelExtractor`** using Accelerate's **`vDSP.FFT`** (zero heap allocations in hot path) and vectorized matrix products for log-mel spectrogram extraction.
 
-### 3. ASR CoreML Inference Engine (Phase 3)
-- Created **`convert_to_coreml.py`** compiling ONNX model nodes (Encoder, Decoder, Joint) to Float16 CoreML package format.
-- Developed **`verify_coreml.py`** comparing ONNX and CoreML output matching accuracy.
-- Created **`CoreMLASREngine`** to run streaming RNN-T inference on Apple Silicon's Neural Engine (ANE) and GPU, maintaining hidden states natively.
+### 3. ASR ONNX Runtime Inference Engine (Phase 3)
+- Integrated the official **`onnxruntime`** Swift Package Manager package dependency, linking directly to high-performance precompiled binaries.
+- Developed **`OnnxASREngine`** to run streaming RNN-T inference directly on the original Hugging Face ONNX models (`encoder.onnx`, `decoder.onnx`, `joint.onnx`), maintaining hidden LSTM states natively.
 - Developed **`Tokenizer`** to decode SentencePiece vocab indices.
 
 ### 4. Text Output & Processors (Phase 4)
@@ -30,7 +29,7 @@ We have completed the native macOS port of [nemo-voice-typing](https://github.co
 - Created **`PermissionManager`** wrapping System Accessibility (`AXIsProcessTrusted`) and Microphone authorizations with system deep-link preferences.
 
 ### 5. Downloads & Distribution (Phase 5)
-- Implemented **`ModelManager`** downloading ASR models asynchronously from Hugging Face with progress callbacks.
+- Implemented **`ModelManager`** downloading raw ONNX models asynchronously from Hugging Face with progress callbacks.
 - Setup **`StartupManager`** using modern `SMAppService` to register the app to run at login.
 - Wrote **`create_dmg.sh`** script that builds, copies assets, signs, and packages the binary into a compressed `.dmg` disk image.
 
