@@ -6,7 +6,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelController: FloatingPanelController!
     private var hotkeyManager: HotkeyManager!
     
-    // Stub properties for ASR/Dictation state to satisfy toggling in Phase 1
+    private let audio = AudioCapture()
     private var isRecording: Bool = false
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
@@ -65,6 +65,13 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             alert.runModal()
         }
         
+        // 6. Bind Audio Capture Levels
+        audio.onLevel = { [weak self] level in
+            DispatchQueue.main.async {
+                self?.panelController.pushAudioLevel(level)
+            }
+        }
+        
         // On launch, the floating panel is created hidden. We show it on toggle.
     }
     
@@ -83,19 +90,27 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func toggleRecording() {
-        // Toggle recording state (Simulated for Phase 1)
-        isRecording.toggle()
-        
-        // Show panel if it's currently hidden
-        if !panelController.isVisible {
-            panelController.show()
-        }
-        
-        panelController.setListening(isRecording)
-        
         if isRecording {
-            // Simulated audio level update loop for visualization test in Phase 1
-            startSimulatedAudioLevels()
+            audio.stop()
+            isRecording = false
+            panelController.setListening(false)
+        } else {
+            do {
+                try audio.start()
+                isRecording = true
+                
+                // Show panel if it's currently hidden
+                if !panelController.isVisible {
+                    panelController.show()
+                }
+                panelController.setListening(true)
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = "Could not start audio recording: \(error.localizedDescription)"
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
         }
     }
     
@@ -106,17 +121,5 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         
         // We will wire actual LaunchAgent setup in StartupManager in Phase 5
         print("Startup toggled: \(enabled)")
-    }
-    
-    // Simulated sound wave bounces for Phase 1 visual verification
-    private func startSimulatedAudioLevels() {
-        guard isRecording else { return }
-        
-        let level = Double.random(in: 0.1...0.9)
-        panelController.pushAudioLevel(level)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.startSimulatedAudioLevels()
-        }
     }
 }
