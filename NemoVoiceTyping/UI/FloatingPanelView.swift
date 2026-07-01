@@ -108,7 +108,7 @@ public struct FloatingPanelView: View {
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
-        .frame(width: isLoading ? 220 : 160, height: 44)
+        .frame(width: isLoading ? 340 : 160, height: 44)
         .onAppear {
             if isListening {
                 startPulsing()

@@ -87,7 +87,9 @@ public class DictationController {
         // 3. Lazy download/compile models
         if asr == nil {
             isLoading = true
+            panelController.show()
             panelController.setLoading(true)
+            panelController.setLoadingText("Checking speech model...")
             
             do {
                 // Ensure model folder assets are downloaded (we'll implement ModelManager in Phase 5)
