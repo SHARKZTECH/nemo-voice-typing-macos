@@ -43,6 +43,7 @@ public class DictationController {
         processor.onTextTyped = { [weak self] text in
             guard !text.isEmpty else { return }
             DispatchQueue.main.async {
+                self?.panelController.setDebugText("Typed: \(text)")
                 self?.onLoadingStatusChanged?("Typed: \(text)", false)
             }
         }
@@ -118,6 +119,7 @@ public class DictationController {
                 
                 engine.onTokenEmitted = { [weak self] piece in
                     DispatchQueue.main.async {
+                        self?.panelController.setDebugText("Heard: \(piece)")
                         self?.onLoadingStatusChanged?("Heard: \(piece)", false)
                     }
                     self?.queue.async {
@@ -143,6 +145,7 @@ public class DictationController {
             
             isLoading = false
             panelController.setLoading(false)
+            panelController.setDebugText("Ready")
             onLoadingStatusChanged?("Ready", false)
         }
         
@@ -163,6 +166,7 @@ public class DictationController {
         do {
             try audio.start()
             panelController.setListening(true)
+            panelController.setDebugText("Listening...")
             onLoadingStatusChanged?("Listening...", false)
         } catch {
             stop()
@@ -192,6 +196,7 @@ public class DictationController {
         }
         
         panelController.setListening(false)
+        panelController.setDebugText(nil)
     }
     
     private func setLoadingText(_ text: String) {

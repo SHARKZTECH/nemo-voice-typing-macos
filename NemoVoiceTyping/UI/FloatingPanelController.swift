@@ -93,6 +93,11 @@ public class FloatingPanelController: NSObject, NSWindowDelegate {
         updateHostingView()
     }
     
+    public func setDebugText(_ text: String?) {
+        view.debugText = text ?? ""
+        updateHostingView()
+    }
+    
     public func pushAudioLevel(_ level: Double) {
         // level comes in as 0..1, map to array values
         let scaled = CGFloat(level)
@@ -116,8 +121,15 @@ public class FloatingPanelController: NSObject, NSWindowDelegate {
             updatedView.onExitTapped = onExitTapped
             hostingView.rootView = updatedView
             
-            // Dynamically adjust width if loading
-            let width: CGFloat = view.isLoading ? 460 : 160
+            // Dynamically adjust width for loading and debug status text.
+            let width: CGFloat
+            if view.isLoading {
+                width = 460
+            } else if !view.debugText.isEmpty {
+                width = 300
+            } else {
+                width = 160
+            }
             let frame = window.frame
             window.setFrame(NSRect(x: frame.origin.x, y: frame.origin.y, width: width, height: 44), display: true, animate: false)
         }

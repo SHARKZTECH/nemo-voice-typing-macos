@@ -5,6 +5,7 @@ public struct FloatingPanelView: View {
     public var isListening: Bool = false
     public var isLoading: Bool = false
     public var loadingText: String = ""
+    public var debugText: String = ""
     public var audioLevels: [CGFloat] = [0.1, 0.1, 0.1, 0.1, 0.1]
     
     // Callbacks
@@ -53,19 +54,20 @@ public struct FloatingPanelView: View {
             .buttonStyle(.plain)
             .help("Toggle Voice Typing (⌘⌥A)")
             
-            if isLoading {
-                // Loading Text with micro pulsing dots
+            if isLoading || !debugText.isEmpty {
                 HStack(spacing: 6) {
-                    Text(loadingText.isEmpty ? "Loading..." : loadingText)
+                    Text(statusText)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.primary.opacity(0.8))
                         .lineLimit(1)
                         .truncationMode(.head)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    ProgressView()
-                        .scaleEffect(0.6)
-                        .frame(width: 14, height: 14)
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .transition(.opacity.combined(with: .scale))
@@ -111,7 +113,7 @@ public struct FloatingPanelView: View {
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
-        .frame(width: isLoading ? 460 : 160, height: 44)
+        .frame(width: panelWidth, height: 44)
         .onAppear {
             if isListening {
                 startPulsing()
@@ -130,5 +132,18 @@ public struct FloatingPanelView: View {
         withAnimation(Animation.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
             pulseScale = 1.15
         }
+    }
+    
+    private var statusText: String {
+        if isLoading {
+            return loadingText.isEmpty ? "Loading..." : loadingText
+        }
+        return debugText
+    }
+    
+    private var panelWidth: CGFloat {
+        if isLoading { return 460 }
+        if !debugText.isEmpty { return 300 }
+        return 160
     }
 }
