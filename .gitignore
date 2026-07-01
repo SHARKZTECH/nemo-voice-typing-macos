@@ -1,0 +1,41 @@
+# OS X
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace
+!default.xcworkspace
+xcuserdata/
+*.sublime-project
+*.sublime-workspace
+.xcworkspace/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# Python / Tools
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+venv/
+.venv/
+env/
+.env
+
+# Models (should be downloaded/loaded dynamically, not committed)
+*.onnx
+*.onnx.data
+*.mlpackage/
+vocab.txt
+tokenizer.json
+tokenizer_config.json
+genai_config.json
+model_config.json
+audio_processor_config.json
