@@ -175,8 +175,8 @@ public class DictationProcessor {
         }
         
         // Capitalize start of sentence (only if model generated it lowercase)
-        let isAllLower = word.allSatisfy { $0.isLowercase }
-        if sentenceStart && isAllLower && !word.isEmpty {
+        let containsUppercase = word.contains { $0.isUppercase }
+        if sentenceStart && !containsUppercase && word.first?.isLowercase == true {
             let firstCap = word.prefix(1).uppercased()
             sb += firstCap + word.dropFirst()
         } else {
