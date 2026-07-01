@@ -79,7 +79,7 @@ temp_dmg="temp.dmg"
 rm -f "$temp_dmg"
 
 # Create a temporary read-write DMG
-hdiutil create -srcfolder "$APP_BUNDLE" -volname "$APP_NAME" -fs HFS+ -fsopt -showresizes -ov -format UDRW "$temp_dmg"
+hdiutil create -srcfolder "$APP_BUNDLE" -volname "$APP_NAME" -fs HFS+ -ov -format UDRW "$temp_dmg"
 
 # Convert to read-only compressed DMG
 echo "Compressing DMG..."

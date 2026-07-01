@@ -39,3 +39,7 @@ tokenizer_config.json
 genai_config.json
 model_config.json
 audio_processor_config.json
+
+# Packaging output
+*.app/
+*.dmg
