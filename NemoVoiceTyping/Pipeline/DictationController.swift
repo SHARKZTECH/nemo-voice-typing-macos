@@ -52,6 +52,7 @@ public class DictationController {
     private func start() async {
         // 1. Verify Accessibility Permissions
         if !PermissionManager.isAccessibilityGranted() {
+            NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Accessibility Permissions Required"
             alert.informativeText = "Nemo Voice Typing needs Accessibility permissions to insert text directly into other applications.\n\nPlease enable it in System Settings and restart dictation."
@@ -69,6 +70,7 @@ public class DictationController {
         // 2. Verify Microphone Permissions
         let micGranted = await PermissionManager.checkMicrophonePermission()
         guard micGranted else {
+            NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Microphone Access Denied"
             alert.informativeText = "Please allow microphone access in System Settings -> Privacy & Security -> Microphone."
@@ -104,6 +106,7 @@ public class DictationController {
                 
                 self.asr = engine
             } catch {
+                NSApp.activate(ignoringOtherApps: true)
                 let alert = NSAlert()
                 alert.messageText = "Failed to load speech engine"
                 alert.informativeText = error.localizedDescription
@@ -139,6 +142,7 @@ public class DictationController {
             panelController.setListening(true)
         } catch {
             stop()
+            NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Failed to start microphone capture"
             alert.informativeText = error.localizedDescription

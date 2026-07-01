@@ -10,6 +10,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
         // 1. Single Instance check
         guard isSingleInstance() else {
+            NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Nemo Voice Typing is already running."
             alert.alertStyle = .informational
@@ -60,6 +61,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if !hotkeyManager.register(hotkeyString: config.hotkey) {
+            NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
             alert.messageText = "Could not register hotkey '\(config.hotkey)'. It may already be in use by another application."
             alert.alertStyle = .warning
