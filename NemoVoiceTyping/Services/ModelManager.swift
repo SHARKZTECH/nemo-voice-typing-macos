@@ -57,7 +57,7 @@ public class ModelManager {
         
         for (index, fileName) in Self.requiredFiles.enumerated() {
             let destinationURL = cacheDir.appendingPathComponent(fileName)
-            if FileManager.default.fileExists(atPath: destinationURL.path) {
+            if isUsableModelFile(destinationURL) {
                 continue
             }
             
@@ -85,6 +85,14 @@ public class ModelManager {
         
         progressHandler("Speech model ready")
         return cacheDir
+    }
+    
+    private func isUsableModelFile(_ url: URL) -> Bool {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let fileSize = attributes[.size] as? NSNumber else {
+            return false
+        }
+        return fileSize.int64Value > 0
     }
     
     private func downloadFile(from url: URL, to destination: URL, session: URLSession, progressHandler: @escaping (Int64, Int64) -> Void) async throws {

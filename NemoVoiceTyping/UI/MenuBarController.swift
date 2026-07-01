@@ -10,6 +10,7 @@ public class MenuBarController: NSObject {
     public var onExit: (() -> Void)? = nil
     
     private var startupMenuItem: NSMenuItem? = nil
+    private var progressMenuItem: NSMenuItem? = nil
     
     public init(config: AppConfig) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -35,6 +36,13 @@ public class MenuBarController: NSObject {
     }
     
     private func setupMenu(config: AppConfig) {
+        let progressItem = NSMenuItem(title: "Ready", action: nil, keyEquivalent: "")
+        progressItem.isEnabled = false
+        self.progressMenuItem = progressItem
+        menu.addItem(progressItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         let toggleItem = NSMenuItem(title: "Toggle Dictation", action: #selector(toggleDictationClicked), keyEquivalent: "")
         toggleItem.target = self
         menu.addItem(toggleItem)
@@ -60,6 +68,12 @@ public class MenuBarController: NSObject {
     
     public func setStartupState(enabled: Bool) {
         startupMenuItem?.state = enabled ? .on : .off
+    }
+    
+    public func setProgressStatus(_ text: String?, loading: Bool) {
+        let title = text?.isEmpty == false ? text! : "Ready"
+        progressMenuItem?.title = loading ? "Model: \(title)" : title
+        statusItem.button?.toolTip = title
     }
     
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {

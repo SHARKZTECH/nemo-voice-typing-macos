@@ -54,6 +54,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.terminate(nil)
         }
         
+        dictationController.onLoadingStatusChanged = { [weak self] text, loading in
+            self?.menuBar.setProgressStatus(text, loading: loading)
+        }
+        
         // 6. Setup Hotkey Manager
         hotkeyManager = HotkeyManager()
         hotkeyManager.onTrigger = { [weak self] in

@@ -15,6 +15,8 @@ public class DictationController {
     
     private let queue = DispatchQueue(label: "com.nemo.dictation.pipeline", qos: .userInteractive)
     
+    public var onLoadingStatusChanged: ((String?, Bool) -> Void)? = nil
+    
     public init(config: AppConfig, panelController: FloatingPanelController) {
         self.config = config
         self.panelController = panelController
@@ -89,13 +91,13 @@ public class DictationController {
             isLoading = true
             panelController.show()
             panelController.setLoading(true)
-            panelController.setLoadingText("Checking speech model...")
+            setLoadingText("Checking speech model...")
             
             do {
                 // Ensure model folder assets are downloaded (we'll implement ModelManager in Phase 5)
                 let modelDir = try await ModelManager.shared.ensureModel(progressHandler: { [weak self] text in
                     DispatchQueue.main.async {
-                        self?.panelController.setLoadingText(text)
+                        self?.setLoadingText(text)
                     }
                 })
                 
@@ -122,11 +124,13 @@ public class DictationController {
                 
                 isLoading = false
                 panelController.setLoading(false)
+                onLoadingStatusChanged?("Ready", false)
                 return
             }
             
             isLoading = false
             panelController.setLoading(false)
+            onLoadingStatusChanged?("Ready", false)
         }
         
         // 4. Start pipeline
@@ -174,5 +178,10 @@ public class DictationController {
         }
         
         panelController.setListening(false)
+    }
+    
+    private func setLoadingText(_ text: String) {
+        panelController.setLoadingText(text)
+        onLoadingStatusChanged?(text, true)
     }
 }
