@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import HotKey
 
 public class HotkeyManager {
@@ -11,7 +12,10 @@ public class HotkeyManager {
     public func register(hotkeyString: String) -> Bool {
         hotKey = nil // clear existing
         
-        let (modifiers, key) = parse(hotkeyString)
+        guard let (modifiers, key) = parse(hotkeyString),
+              canRegister(key: key, modifiers: modifiers) else {
+            return false
+        }
         
         // Create the HotKey
         let newHotKey = HotKey(key: key, modifiers: modifiers)
@@ -23,9 +27,9 @@ public class HotkeyManager {
         return true
     }
     
-    private func parse(_ hotkeyStr: String) -> (NSEvent.ModifierFlags, Key) {
+    private func parse(_ hotkeyStr: String) -> (NSEvent.ModifierFlags, Key)? {
         var modifiers: NSEvent.ModifierFlags = []
-        var selectedKey: Key = .a
+        var selectedKey: Key? = nil
         
         let parts = hotkeyStr.lowercased().split(separator: "+")
         for part in parts {
@@ -46,6 +50,8 @@ public class HotkeyManager {
             }
         }
         
+        guard let selectedKey else { return nil }
+        
         // If no modifiers specified, default to Command + Option
         if modifiers.isEmpty {
             modifiers = [.command, .option]
@@ -53,6 +59,35 @@ public class HotkeyManager {
         
         return (modifiers, selectedKey)
     }
+    
+    private func canRegister(key: Key, modifiers: NSEvent.ModifierFlags) -> Bool {
+        let combo = KeyCombo(key: key, modifiers: modifiers)
+        let hotKeyID = EventHotKeyID(signature: Self.eventHotKeySignature, id: 1)
+        var eventHotKey: EventHotKeyRef?
+        
+        let status = RegisterEventHotKey(
+            combo.carbonKeyCode,
+            combo.carbonModifiers,
+            hotKeyID,
+            GetEventDispatcherTarget(),
+            0,
+            &eventHotKey
+        )
+        
+        if let eventHotKey {
+            UnregisterEventHotKey(eventHotKey)
+        }
+        
+        return status == noErr
+    }
+    
+    private static let eventHotKeySignature: UInt32 = {
+        var result: UInt32 = 0
+        for char in "NvHt".utf16 {
+            result = (result << 8) + UInt32(char)
+        }
+        return result
+    }()
     
     private func mapKeyString(_ keyStr: String) -> Key? {
         // Standard alphabetical keys
