@@ -10,7 +10,6 @@ public class OnnxASREngine: ASREngine {
     private let melExtractor = MelExtractor()
     
     public var onTokenEmitted: ((String) -> Void)? = nil
-    public var onDebugStatus: ((String) -> Void)? = nil
     
     // Constants matching model shape definitions
     private let chunkSamples = 8960          // 560 ms @ 16 kHz
@@ -30,8 +29,6 @@ public class OnnxASREngine: ASREngine {
     
     // Sliding audio buffer
     private var audioBuf: [Float] = []
-    private var processedChunks = 0
-    private var blankFrames = 0
     
     // Cached mel frames from previous chunk
     private var melCache: [[Float]] = []
@@ -69,8 +66,6 @@ public class OnnxASREngine: ASREngine {
     
     public func reset() {
         audioBuf.removeAll()
-        processedChunks = 0
-        blankFrames = 0
         melCachePrimed = false
         melCache = [[Float]](repeating: [Float](repeating: 0, count: preEncodeCacheFrames), count: nMels)
         lastToken = Int64(blankId)
@@ -98,13 +93,7 @@ public class OnnxASREngine: ASREngine {
     }
     
     private func processChunk(_ chunk: [Float]) {
-        guard let encoder = encoder, let decoder = decoder, let joint = joint, let tokenizer = tokenizer else {
-            onDebugStatus?("ASR not loaded")
-            return
-        }
-        
-        processedChunks += 1
-        onDebugStatus?("ASR chunk \(processedChunks)")
+        guard let encoder = encoder, let decoder = decoder, let joint = joint, let tokenizer = tokenizer else { return }
         
         let newFrames = chunkSamples / MelExtractor.hopLength // 56
         let newMels = melExtractor.compute(samples: chunk, frames: newFrames)
@@ -148,7 +137,6 @@ public class OnnxASREngine: ASREngine {
               let cacheChannelValue = try? ORTValue(tensorData: cacheChannelData, elementType: .float, shape: [1, encLayers as NSNumber, leftContext as NSNumber, encHidden as NSNumber]),
               let cacheTimeValue = try? ORTValue(tensorData: cacheTimeData, elementType: .float, shape: [1, encLayers as NSNumber, encHidden as NSNumber, convContext as NSNumber]),
               let cacheChannelLenValue = try? ORTValue(tensorData: cacheChannelLenData, elementType: .int64, shape: [1]) else {
-            onDebugStatus?("ASR tensor setup failed")
             return
         }
         
@@ -163,7 +151,6 @@ public class OnnxASREngine: ASREngine {
         // Run Encoder
         guard let encoderOutputs = try? encoder.run(withInputs: encoderInputs, outputNames: ["outputs", "cache_last_channel_next", "cache_last_time_next", "cache_last_channel_len_next"], runOptions: nil) else {
             print("ONNX Encoder run failed")
-            onDebugStatus?("ASR encoder failed")
             return
         }
         
@@ -177,12 +164,8 @@ public class OnnxASREngine: ASREngine {
             cacheLastChannelLen = extractInt64Array(from: nextChannelLenTensor)
         }
         
-        guard let outputsTensor = encoderOutputs["outputs"] else {
-            onDebugStatus?("ASR missing encoder output")
-            return
-        }
+        guard let outputsTensor = encoderOutputs["outputs"] else { return }
         let outputs = extractFloatArray(from: outputsTensor) // Flat size [1, 7, 1024]
-        var emittedInChunk = 0
         
         // Process each of the 7 encoder output time steps
         for t in 0..<encTimeOut {
@@ -204,7 +187,6 @@ public class OnnxASREngine: ASREngine {
                 guard let targetsValue = try? ORTValue(tensorData: targetsData, elementType: .int64, shape: [1, 1]),
                       let hValue = try? ORTValue(tensorData: hData, elementType: .float, shape: [decLayers as NSNumber, 1, decHidden as NSNumber]),
                       let cValue = try? ORTValue(tensorData: cData, elementType: .float, shape: [decLayers as NSNumber, 1, decHidden as NSNumber]) else {
-                    onDebugStatus?("ASR decoder tensor failed")
                     break
                 }
                 
@@ -215,31 +197,19 @@ public class OnnxASREngine: ASREngine {
                 ]
                 
                 // Run Decoder
-                guard let decoderOutputs = try? decoder.run(withInputs: decoderInputs, outputNames: ["decoder_output", "h_out", "c_out"], runOptions: nil) else {
-                    onDebugStatus?("ASR decoder failed")
-                    break
-                }
+                guard let decoderOutputs = try? decoder.run(withInputs: decoderInputs, outputNames: ["decoder_output", "h_out", "c_out"], runOptions: nil) else { break }
                 
                 guard let decOutputTensor = decoderOutputs["decoder_output"],
                       let nextHTensor = decoderOutputs["h_out"],
-                      let nextCTensor = decoderOutputs["c_out"] else {
-                    onDebugStatus?("ASR missing decoder output")
-                    break
-                }
+                      let nextCTensor = decoderOutputs["c_out"] else { break }
                 
                 // Setup Joint Inputs
                 let encFrameData = NSMutableData(bytes: &encFrame, length: encFrame.count * MemoryLayout<Float>.size)
-                guard let encFrameValue = try? ORTValue(tensorData: encFrameData, elementType: .float, shape: [1, 1, encHidden as NSNumber]) else {
-                    onDebugStatus?("ASR joint tensor failed")
-                    break
-                }
+                guard let encFrameValue = try? ORTValue(tensorData: encFrameData, elementType: .float, shape: [1, 1, encHidden as NSNumber]) else { break }
                 
                 let decoderForJoint = decoderOutputForJoint(from: decOutputTensor)
                 let decoderForJointData = NSMutableData(bytes: decoderForJoint, length: decoderForJoint.count * MemoryLayout<Float>.size)
-                guard let decoderForJointValue = try? ORTValue(tensorData: decoderForJointData, elementType: .float, shape: [1, 1, decHidden as NSNumber]) else {
-                    onDebugStatus?("ASR decoder reshape failed")
-                    break
-                }
+                guard let decoderForJointValue = try? ORTValue(tensorData: decoderForJointData, elementType: .float, shape: [1, 1, decHidden as NSNumber]) else { break }
                 
                 let jointInputs = [
                     "encoder_output": encFrameValue,
@@ -247,14 +217,8 @@ public class OnnxASREngine: ASREngine {
                 ]
                 
                 // Run Joint
-                guard let jointOutputs = try? joint.run(withInputs: jointInputs, outputNames: ["joint_output"], runOptions: nil) else {
-                    onDebugStatus?("ASR joint failed")
-                    break
-                }
-                guard let jointOutTensor = jointOutputs["joint_output"] else {
-                    onDebugStatus?("ASR missing joint output")
-                    break
-                }
+                guard let jointOutputs = try? joint.run(withInputs: jointInputs, outputNames: ["joint_output"], runOptions: nil) else { break }
+                guard let jointOutTensor = jointOutputs["joint_output"] else { break }
                 
                 let logits = extractFloatArray(from: jointOutTensor) // Size [1025]
                 
@@ -262,7 +226,6 @@ public class OnnxASREngine: ASREngine {
                 let best = argmax(logits)
                 
                 if best == blankId {
-                    blankFrames += 1
                     break
                 }
                 
@@ -273,14 +236,9 @@ public class OnnxASREngine: ASREngine {
                 
                 let piece = tokenizer.piece(id: best)
                 onTokenEmitted?(piece)
-                emittedInChunk += 1
                 
                 symbols += 1
             }
-        }
-        
-        if emittedInChunk == 0 {
-            onDebugStatus?("ASR blank \(blankFrames)")
         }
     }
     

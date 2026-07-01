@@ -12,8 +12,6 @@ public class DictationController {
     private var isRunning: Bool = false
     private var isLoading: Bool = false
     private var timer: DispatchSourceTimer? = nil
-    private var audioPacketCount: Int = 0
-    private var lastAudioDebugTime: CFAbsoluteTime = 0
     
     private let queue = DispatchQueue(label: "com.nemo.dictation.pipeline", qos: .userInteractive)
     
@@ -30,7 +28,6 @@ public class DictationController {
     private func setupAudioCallbacks() {
         audio.onSamples = { [weak self] samples in
             self?.queue.async {
-                self?.recordAudioPacket(samples)
                 self?.asr?.pushAudio(samples)
             }
         }
@@ -129,14 +126,6 @@ public class DictationController {
                         self?.processor.push(piece: piece)
                     }
                 }
-                
-                engine.onDebugStatus = { [weak self] status in
-                    DispatchQueue.main.async {
-                        self?.panelController.setDebugText(status)
-                        self?.onLoadingStatusChanged?(status, false)
-                    }
-                }
-                
                 self.asr = engine
             } catch {
                 NSApp.activate(ignoringOtherApps: true)
@@ -162,8 +151,6 @@ public class DictationController {
         // 4. Start pipeline
         asr?.reset()
         processor.reset()
-        audioPacketCount = 0
-        lastAudioDebugTime = 0
         isRunning = true
         
         // Start Tick Timer (cadence of 100ms for buffer flush timeouts)
@@ -214,24 +201,5 @@ public class DictationController {
     private func setLoadingText(_ text: String) {
         panelController.setLoadingText(text)
         onLoadingStatusChanged?(text, true)
-    }
-    
-    private func recordAudioPacket(_ samples: [Float]) {
-        guard isRunning else { return }
-        
-        audioPacketCount += 1
-        let now = CFAbsoluteTimeGetCurrent()
-        guard now - lastAudioDebugTime >= 1.0 else { return }
-        lastAudioDebugTime = now
-        
-        let peak = samples.reduce(Float(0)) { current, sample in
-            max(current, abs(sample))
-        }
-        let status = String(format: "Mic packets %d peak %.3f", audioPacketCount, peak)
-        
-        DispatchQueue.main.async { [weak self] in
-            self?.panelController.setDebugText(status)
-            self?.onLoadingStatusChanged?(status, false)
-        }
     }
 }
