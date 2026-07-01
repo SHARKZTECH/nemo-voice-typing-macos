@@ -6,19 +6,16 @@ public class FloatingPanelController: NSObject, NSWindowDelegate {
     public var view: FloatingPanelView
     private var config: AppConfig
     
-    public var onMicTapped: (() -> Void)? {
-        get { view.onMicTapped }
-        set { view.onMicTapped = newValue }
+    public var onMicTapped: (() -> Void)? = nil {
+        didSet { updateHostingView() }
     }
     
-    public var onHideTapped: (() -> Void)? {
-        get { view.onHideTapped }
-        set { view.onHideTapped = newValue }
+    public var onHideTapped: (() -> Void)? = nil {
+        didSet { updateHostingView() }
     }
     
-    public var onExitTapped: (() -> Void)? {
-        get { view.onExitTapped }
-        set { view.onExitTapped = newValue }
+    public var onExitTapped: (() -> Void)? = nil {
+        didSet { updateHostingView() }
     }
     
     public init(config: AppConfig) {
@@ -113,7 +110,12 @@ public class FloatingPanelController: NSObject, NSWindowDelegate {
     
     private func updateHostingView() {
         if let hostingView = window.contentView as? NSHostingView<FloatingPanelView> {
-            hostingView.rootView = view
+            var updatedView = view
+            updatedView.onMicTapped = onMicTapped
+            updatedView.onHideTapped = onHideTapped
+            updatedView.onExitTapped = onExitTapped
+            hostingView.rootView = updatedView
+            
             // Dynamically adjust width if loading
             let width: CGFloat = view.isLoading ? 220 : 160
             let frame = window.frame
