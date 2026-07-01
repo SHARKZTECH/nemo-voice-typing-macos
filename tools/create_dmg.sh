@@ -72,10 +72,11 @@ EOF
 SIGN_IDENTITY=${SIGN_IDENTITY:-""}
 
 if [ -z "$SIGN_IDENTITY" ]; then
-    if security find-identity -v -p codesigning | grep -q "Nemo Voice Typing Local Signing"; then
+    VALID_IDENTITIES=$(security find-identity -v -p codesigning)
+    if echo "$VALID_IDENTITIES" | grep -q "Nemo Voice Typing Local Signing"; then
         SIGN_IDENTITY="Nemo Voice Typing Local Signing"
         echo "Using local signing identity: '$SIGN_IDENTITY'"
-    elif FIRST_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning | sed -n 's/.*"\(.*\)"/\1/p' | head -n 1); [ -n "$FIRST_CODESIGN_IDENTITY" ]; then
+    elif FIRST_CODESIGN_IDENTITY=$(echo "$VALID_IDENTITIES" | sed -n 's/^[[:space:]]*[0-9]*) [A-Fa-f0-9]\{40,\} "\(.*\)"/\1/p' | head -n 1); [ -n "$FIRST_CODESIGN_IDENTITY" ]; then
         SIGN_IDENTITY="$FIRST_CODESIGN_IDENTITY"
         echo "Using first available signing identity: '$SIGN_IDENTITY'"
     else
@@ -89,6 +90,11 @@ fi
 echo "Signing application bundle with identity: '$SIGN_IDENTITY'..."
 codesign --force --options runtime --entitlements entitlements.plist --sign "$SIGN_IDENTITY" "$APP_BUNDLE/Contents/MacOS/NemoVoiceTyping"
 codesign --force --options runtime --entitlements entitlements.plist --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+if ! codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"; then
+    echo "ERROR: code signature verification failed for $APP_BUNDLE" >&2
+    echo "ERROR: install a valid code-signing certificate or run with SIGN_IDENTITY='-' for ad-hoc local testing." >&2
+    exit 1
+fi
 
 rm -f entitlements.plist
 
