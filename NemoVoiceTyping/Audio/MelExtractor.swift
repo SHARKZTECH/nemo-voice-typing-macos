@@ -20,7 +20,7 @@ public class MelExtractor {
     public init() {
         // 1. Build Hann Window
         var win = [Float](repeating: 0, count: Self.winLength)
-        vDSP_hann_window(&win, vDSP_Length(Self.winLength), Int32(vDSP_HANN_NORM))
+        vDSP_hann_window(&win, vDSP_Length(Self.winLength), Int32(vDSP_HANN_DENORM))
         self.window = win
         
         // 2. Setup FFT
