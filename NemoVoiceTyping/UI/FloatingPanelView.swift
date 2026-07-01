@@ -2,10 +2,10 @@ import SwiftUI
 
 public struct FloatingPanelView: View {
     // UI State
-    @State public var isListening: Bool = false
-    @State public var isLoading: Bool = false
-    @State public var loadingText: String = ""
-    @State public var audioLevels: [CGFloat] = [0.1, 0.1, 0.1, 0.1, 0.1]
+    public var isListening: Bool = false
+    public var isLoading: Bool = false
+    public var loadingText: String = ""
+    public var audioLevels: [CGFloat] = [0.1, 0.1, 0.1, 0.1, 0.1]
     
     // Callbacks
     public var onMicTapped: (() -> Void)? = nil
@@ -60,11 +60,14 @@ public struct FloatingPanelView: View {
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.primary.opacity(0.8))
                         .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     ProgressView()
                         .scaleEffect(0.6)
                         .frame(width: 14, height: 14)
                 }
+                .frame(maxWidth: .infinity)
                 .transition(.opacity.combined(with: .scale))
             } else {
                 // Audio Levels Visualizer
