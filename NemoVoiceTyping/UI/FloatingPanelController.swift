@@ -117,7 +117,7 @@ public class FloatingPanelController: NSObject, NSWindowDelegate {
             hostingView.rootView = updatedView
             
             // Dynamically adjust width if loading
-            let width: CGFloat = view.isLoading ? 340 : 160
+            let width: CGFloat = view.isLoading ? 460 : 160
             let frame = window.frame
             window.setFrame(NSRect(x: frame.origin.x, y: frame.origin.y, width: width, height: 44), display: true, animate: false)
         }

@@ -21,6 +21,13 @@ public class ModelManager {
     
     private init() {}
     
+    private static let byteFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        return formatter
+    }()
+    
     public func isModelDownloaded() -> Bool {
         let cacheDir = defaultCacheDir
         
@@ -63,11 +70,13 @@ public class ModelManager {
             progressHandler("Starting \(fileName) (\(fileNumber)/\(Self.requiredFiles.count))")
             
             try await downloadFile(from: url, to: destinationURL, session: session, progressHandler: { bytesWritten, totalBytes in
+                let received = Self.byteFormatter.string(fromByteCount: bytesWritten)
                 if totalBytes > 0 {
+                    let total = Self.byteFormatter.string(fromByteCount: totalBytes)
                     let percentage = Int((Double(bytesWritten) / Double(totalBytes)) * 100)
-                    progressHandler("Downloading \(fileName) (\(fileNumber)/\(Self.requiredFiles.count)) \(percentage)%")
+                    progressHandler("\(fileName) \(percentage)% (\(received)/\(total))")
                 } else {
-                    progressHandler("Downloading \(fileName) (\(fileNumber)/\(Self.requiredFiles.count))")
+                    progressHandler("\(fileName) \(received) downloaded")
                 }
             })
             

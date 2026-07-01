@@ -60,7 +60,7 @@ public struct FloatingPanelView: View {
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.primary.opacity(0.8))
                         .lineLimit(1)
-                        .truncationMode(.middle)
+                        .truncationMode(.head)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     ProgressView()
@@ -111,7 +111,7 @@ public struct FloatingPanelView: View {
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
-        .frame(width: isLoading ? 340 : 160, height: 44)
+        .frame(width: isLoading ? 460 : 160, height: 44)
         .onAppear {
             if isListening {
                 startPulsing()

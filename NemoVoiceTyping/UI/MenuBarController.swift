@@ -72,7 +72,7 @@ public class MenuBarController: NSObject {
     
     public func setProgressStatus(_ text: String?, loading: Bool) {
         let title = text?.isEmpty == false ? text! : "Ready"
-        progressMenuItem?.title = loading ? "Model: \(title)" : title
+        progressMenuItem?.title = loading ? "↻ \(title)" : title
         statusItem.button?.toolTip = title
     }
     
