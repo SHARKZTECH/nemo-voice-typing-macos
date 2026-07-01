@@ -68,6 +68,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         // On launch, the floating panel is created hidden. We show it on toggle.
+        
+        // 7. Verify and sync login item startup state
+        menuBar.setStartupState(enabled: StartupManager.isEnabled())
     }
     
     private func isSingleInstance() -> Bool {
@@ -88,8 +91,6 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         config.runAtStartup = enabled
         config.save()
         menuBar.setStartupState(enabled: enabled)
-        
-        // We will wire actual LaunchAgent setup in StartupManager in Phase 5
-        print("Startup toggled: \(enabled)")
+        StartupManager.setEnabled(enabled)
     }
 }
