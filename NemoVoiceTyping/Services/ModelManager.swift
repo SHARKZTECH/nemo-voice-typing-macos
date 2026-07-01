@@ -24,18 +24,11 @@ public class ModelManager {
     public func isModelDownloaded() -> Bool {
         let cacheDir = defaultCacheDir
         
-        // On macOS with CoreML, we first check if the compiled CoreML models exist
-        let coremlDownloaded = ["Encoder.mlpackage", "Decoder.mlpackage", "Joint.mlpackage", "vocab.txt"].allSatisfy {
-            FileManager.default.fileExists(atPath: cacheDir.appendingPathComponent($0).path)
-        }
-        if coremlDownloaded {
-            return true
-        }
-        
-        // Fallback: check if raw ONNX files are downloaded
         for file in Self.requiredFiles {
             let fileURL = cacheDir.appendingPathComponent(file)
-            if !FileManager.default.fileExists(atPath: fileURL.path) {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+                  let fileSize = attributes[.size] as? NSNumber,
+                  fileSize.int64Value > 0 else {
                 return false
             }
         }
@@ -81,7 +74,16 @@ public class ModelManager {
             try? FileManager.default.removeItem(at: tempURL)
         }
         
-        let (location, response) = try await session.download(from: url)
+        let delegate = ModelDownloadDelegate(progressHandler: progressHandler)
+        let progressSession = URLSession(configuration: session.configuration, delegate: delegate, delegateQueue: nil)
+        defer {
+            progressSession.invalidateAndCancel()
+        }
+        
+        let (location, response) = try await withCheckedThrowingContinuation { continuation in
+            delegate.continuation = continuation
+            progressSession.downloadTask(with: url).resume()
+        }
         
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw NSError(domain: "ModelManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to download \(url.lastPathComponent) from Hugging Face."])
@@ -92,5 +94,43 @@ public class ModelManager {
             try? FileManager.default.removeItem(at: destination)
         }
         try FileManager.default.moveItem(at: location, to: destination)
+    }
+}
+
+private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate {
+    var continuation: CheckedContinuation<(URL, URLResponse?), Error>? = nil
+    private let progressHandler: (Int64, Int64) -> Void
+    
+    init(progressHandler: @escaping (Int64, Int64) -> Void) {
+        self.progressHandler = progressHandler
+    }
+    
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        progressHandler(totalBytesWritten, totalBytesExpectedToWrite)
+    }
+    
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        continuation?.resume(returning: (location, downloadTask.response))
+        continuation = nil
+    }
+    
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: Error?
+    ) {
+        guard let error, let continuation else { return }
+        continuation.resume(throwing: error)
+        self.continuation = nil
     }
 }
