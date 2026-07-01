@@ -8,6 +8,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var dictationController: DictationController!
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = TargetApplicationTracker.shared
+        
         // 1. Single Instance check
         guard isSingleInstance() else {
             NSApp.activate(ignoringOtherApps: true)

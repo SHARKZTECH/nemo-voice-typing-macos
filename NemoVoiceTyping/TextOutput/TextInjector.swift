@@ -21,10 +21,14 @@ public struct TextInjector {
         let pasteboard = NSPasteboard.general
         let savedItems = savePasteboardItems(from: pasteboard)
         
+        TargetApplicationTracker.shared.restoreLastTargetApplication()
+        
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         
-        pressKey(9, flags: .maskCommand)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            pressKey(9, flags: .maskCommand)
+        }
         
         // Give the focused app a window to consume the pasteboard before
         // restoring it. Some Electron/WebKit fields read paste data asynchronously.
