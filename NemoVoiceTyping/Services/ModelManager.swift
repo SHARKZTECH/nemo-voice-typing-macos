@@ -101,13 +101,13 @@ public class ModelManager {
             try? FileManager.default.removeItem(at: tempURL)
         }
         
-        let delegate = ModelDownloadDelegate(progressHandler: progressHandler)
+        let delegate = ModelDownloadDelegate(stagingURL: tempURL, progressHandler: progressHandler)
         let progressSession = URLSession(configuration: session.configuration, delegate: delegate, delegateQueue: nil)
         defer {
             progressSession.invalidateAndCancel()
         }
         
-        let (location, response) = try await withCheckedThrowingContinuation { continuation in
+        let response = try await withCheckedThrowingContinuation { continuation in
             delegate.continuation = continuation
             progressSession.downloadTask(with: url).resume()
         }
@@ -120,15 +120,17 @@ public class ModelManager {
         if FileManager.default.fileExists(atPath: destination.path) {
             try? FileManager.default.removeItem(at: destination)
         }
-        try FileManager.default.moveItem(at: location, to: destination)
+        try FileManager.default.moveItem(at: tempURL, to: destination)
     }
 }
 
 private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate {
-    var continuation: CheckedContinuation<(URL, URLResponse?), Error>? = nil
+    var continuation: CheckedContinuation<URLResponse?, Error>? = nil
+    private let stagingURL: URL
     private let progressHandler: (Int64, Int64) -> Void
     
-    init(progressHandler: @escaping (Int64, Int64) -> Void) {
+    init(stagingURL: URL, progressHandler: @escaping (Int64, Int64) -> Void) {
+        self.stagingURL = stagingURL
         self.progressHandler = progressHandler
     }
     
@@ -147,8 +149,17 @@ private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate 
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        continuation?.resume(returning: (location, downloadTask.response))
-        continuation = nil
+        do {
+            if FileManager.default.fileExists(atPath: stagingURL.path) {
+                try FileManager.default.removeItem(at: stagingURL)
+            }
+            try FileManager.default.moveItem(at: location, to: stagingURL)
+            continuation?.resume(returning: downloadTask.response)
+            continuation = nil
+        } catch {
+            continuation?.resume(throwing: error)
+            continuation = nil
+        }
     }
     
     func urlSession(
