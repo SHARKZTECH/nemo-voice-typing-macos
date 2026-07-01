@@ -234,9 +234,16 @@ public class OnnxASREngine: ASREngine {
                     break
                 }
                 
+                let decoderForJoint = decoderOutputForJoint(from: decOutputTensor)
+                let decoderForJointData = NSMutableData(bytes: decoderForJoint, length: decoderForJoint.count * MemoryLayout<Float>.size)
+                guard let decoderForJointValue = try? ORTValue(tensorData: decoderForJointData, elementType: .float, shape: [1, 1, decHidden as NSNumber]) else {
+                    onDebugStatus?("ASR decoder reshape failed")
+                    break
+                }
+                
                 let jointInputs = [
                     "encoder_output": encFrameValue,
-                    "decoder_output": decOutputTensor
+                    "decoder_output": decoderForJointValue
                 ]
                 
                 // Run Joint
@@ -284,6 +291,12 @@ public class OnnxASREngine: ASREngine {
             let floatPtr = rawBuffer.bindMemory(to: Float.self)
             return Array(floatPtr)
         }
+    }
+    
+    private func decoderOutputForJoint(from tensor: ORTValue) -> [Float] {
+        let decoderOutput = extractFloatArray(from: tensor)
+        guard decoderOutput.count == decHidden else { return decoderOutput }
+        return decoderOutput
     }
     
     private func extractInt64Array(from tensor: ORTValue) -> [Int64] {
