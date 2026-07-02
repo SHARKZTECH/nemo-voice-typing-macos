@@ -86,6 +86,18 @@ git push origin v1.0.0
 
 The workflow builds the app on `macos-14`, creates `NemoVoiceTyping-1.0.dmg`, and uploads it to the GitHub Release for that tag.
 
+For public releases that open cleanly on other Macs, configure these GitHub repository secrets before pushing a tag:
+
+- `MACOS_CERTIFICATE_P12`: base64-encoded Developer ID Application certificate exported as `.p12`.
+- `MACOS_CERTIFICATE_PASSWORD`: password for the exported `.p12`.
+- `MACOS_SIGN_IDENTITY`: Developer ID Application signing identity name.
+- `KEYCHAIN_PASSWORD`: temporary CI keychain password.
+- `APPLE_ID`: Apple ID used for notarization.
+- `APPLE_APP_PASSWORD`: app-specific password for that Apple ID.
+- `APPLE_TEAM_ID`: Apple Developer Team ID.
+
+If these secrets are missing, the workflow still creates a tester DMG with ad-hoc signing, but macOS may show stronger Gatekeeper warnings.
+
 ## Credits
 
 - Inspired by [Garnet-Owl/nemo-voice-typing](https://github.com/Garnet-Owl/nemo-voice-typing).

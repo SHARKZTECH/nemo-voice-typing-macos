@@ -57,8 +57,6 @@ cat <<EOF > entitlements.plist
 <dict>
     <key>com.apple.security.device.audio-input</key>
     <true/>
-    <key>com.apple.security.get-task-allow</key>
-    <true/>
 </dict>
 </plist>
 EOF

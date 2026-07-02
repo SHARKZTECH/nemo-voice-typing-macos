@@ -18,6 +18,9 @@ jobs:
   build-release:
     name: Build and publish macOS DMG
     runs-on: macos-14
+    env:
+      HAS_MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_NOTARY_CREDENTIALS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
 
     steps:
       - name: Check out repository
@@ -26,13 +29,51 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Import Developer ID certificate
+        if: env.HAS_MACOS_CERTIFICATE == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security find-identity -v -p codesigning
+
       - name: Build DMG
-        run: SIGN_IDENTITY="-" ./tools/create_dmg.sh
+        env:
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          if [ -n "$MACOS_SIGN_IDENTITY" ]; then
+            SIGN_IDENTITY="$MACOS_SIGN_IDENTITY" ./tools/create_dmg.sh
+          else
+            SIGN_IDENTITY="-" ./tools/create_dmg.sh
+          fi
+
+      - name: Notarize and staple DMG
+        if: env.HAS_NOTARY_CREDENTIALS == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit NemoVoiceTyping-1.0.dmg \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple NemoVoiceTyping-1.0.dmg
 
       - name: Verify release asset
         run: |
           test -f NemoVoiceTyping-1.0.dmg
           hdiutil imageinfo NemoVoiceTyping-1.0.dmg
+          codesign --verify --verbose=2 NemoVoiceTyping-1.0.dmg
 
       - name: Create GitHub Release
         env:
